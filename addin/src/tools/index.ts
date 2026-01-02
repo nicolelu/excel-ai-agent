@@ -409,18 +409,30 @@ class ExcelTools {
         const sheet = context.workbook.worksheets.getItem(sheetName);
         const range = sheet.getRange(address);
 
-        // Set formula (handles both single cell and range)
-        if (address.includes(':')) {
-          range.formulas = [[formula]];
-        } else {
-          range.formulas = [[formula]];
+        // Load range dimensions to properly size the formula array
+        range.load(['rowCount', 'columnCount']);
+        await context.sync();
+
+        const rowCount = range.rowCount;
+        const colCount = range.columnCount;
+
+        // Create a 2D array matching the range dimensions, filled with the formula
+        // For ranges, Excel will auto-adjust relative references
+        const formulas: string[][] = [];
+        for (let r = 0; r < rowCount; r++) {
+          const row: string[] = [];
+          for (let c = 0; c < colCount; c++) {
+            row.push(formula);
+          }
+          formulas.push(row);
         }
 
+        range.formulas = formulas;
         await context.sync();
 
         return {
           success: true,
-          data: { address, formula },
+          data: { address, formula, rowCount, colCount },
         };
       });
     } catch (error) {
@@ -642,6 +654,10 @@ class ExcelTools {
         const range = sheet.getRange(address);
         const rangeFormat = range.format;
 
+        // Load range dimensions for numberFormat
+        range.load(['rowCount', 'columnCount']);
+        await context.sync();
+
         if (format.bold !== undefined) {
           rangeFormat.font.bold = format.bold;
         }
@@ -661,7 +677,16 @@ class ExcelTools {
           rangeFormat.fill.color = format.backgroundColor;
         }
         if (format.numberFormat !== undefined) {
-          range.numberFormat = [[format.numberFormat]];
+          // Create 2D array matching range dimensions
+          const numberFormats: string[][] = [];
+          for (let r = 0; r < range.rowCount; r++) {
+            const row: string[] = [];
+            for (let c = 0; c < range.columnCount; c++) {
+              row.push(format.numberFormat);
+            }
+            numberFormats.push(row);
+          }
+          range.numberFormat = numberFormats;
         }
         if (format.horizontalAlignment !== undefined) {
           rangeFormat.horizontalAlignment = format.horizontalAlignment as Excel.HorizontalAlignment;

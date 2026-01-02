@@ -10,7 +10,11 @@ import type {
   ToolResult,
 } from '@shared/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// In development, use /api proxy to avoid mixed-content issues
+// In production, use the full URL
+const API_URL = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_URL || 'http://localhost:3001')
+  : '/api';
 
 interface ChatApiResponse {
   success: boolean;

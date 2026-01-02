@@ -25,24 +25,22 @@ export class GoogleAdapter implements LLMProvider {
   private client: GoogleGenerativeAI;
   private modelId: string;
   private defaultTemperature: number;
-  private defaultMaxTokens: number;
 
   constructor(config: LLMProviderConfig) {
     this.client = new GoogleGenerativeAI(config.apiKey);
     this.modelId = config.modelId;
     this.defaultTemperature = config.temperature ?? 0.7;
-    this.defaultMaxTokens = config.maxTokens ?? 4096;
   }
 
   async chat(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
     const { systemInstruction, contents } = this.convertMessages(request.messages);
 
+    // Don't limit output tokens - let the model complete its response fully
     const model = this.client.getGenerativeModel({
       model: this.modelId,
       systemInstruction,
       generationConfig: {
         temperature: request.temperature ?? this.defaultTemperature,
-        maxOutputTokens: request.maxTokens ?? this.defaultMaxTokens,
       },
       tools: request.tools ? this.convertTools(request.tools) : undefined,
       toolConfig: request.tools
@@ -98,12 +96,12 @@ export class GoogleAdapter implements LLMProvider {
   async *streamChat(request: ChatCompletionRequest): AsyncGenerator<ChatResponseChunk> {
     const { systemInstruction, contents } = this.convertMessages(request.messages);
 
+    // Don't limit output tokens - let the model complete its response fully
     const model = this.client.getGenerativeModel({
       model: this.modelId,
       systemInstruction,
       generationConfig: {
         temperature: request.temperature ?? this.defaultTemperature,
-        maxOutputTokens: request.maxTokens ?? this.defaultMaxTokens,
       },
       tools: request.tools ? this.convertTools(request.tools) : undefined,
       toolConfig: request.tools

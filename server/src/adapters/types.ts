@@ -79,17 +79,81 @@ export function toolDefinitionsToProviderTools(): ProviderTool[] {
         properties: Object.fromEntries(
           tool.parameters.map(param => [
             param.name,
-            {
-              type: param.type === 'array' ? 'array' : param.type === 'object' ? 'object' : param.type,
-              description: param.description,
-              ...(param.default !== undefined && { default: param.default }),
-            },
+            getParameterSchema(param.name, param.type, param.description, param.default),
           ])
         ),
         required: tool.parameters.filter(p => p.required).map(p => p.name),
       },
     },
   }));
+}
+
+/**
+ * Get JSON Schema for a parameter, handling arrays and special cases
+ */
+function getParameterSchema(
+  name: string,
+  type: string,
+  description: string,
+  defaultValue?: unknown
+): Record<string, unknown> {
+  const base: Record<string, unknown> = { description };
+
+  if (defaultValue !== undefined) {
+    base.default = defaultValue;
+  }
+
+  if (type === 'array') {
+    // Handle specific array parameters with proper items schema
+    base.type = 'array';
+
+    if (name === 'values') {
+      // 2D array for writeRange
+      base.items = {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Row of values',
+      };
+    } else if (name === 'rows' || name === 'columns' || name === 'filters') {
+      // String arrays for pivot table fields
+      base.items = { type: 'string' };
+    } else {
+      // Default: array of objects (e.g., PivotValueField)
+      base.items = {
+        type: 'object',
+        properties: {
+          field: { type: 'string', description: 'Field name' },
+          summarizeBy: {
+            type: 'string',
+            description: 'Aggregation function',
+            enum: ['sum', 'count', 'average', 'max', 'min'],
+          },
+          name: { type: 'string', description: 'Display name' },
+        },
+        required: ['field'],
+      };
+    }
+  } else if (type === 'object') {
+    base.type = 'object';
+    // For format objects, provide a basic schema
+    if (name === 'format') {
+      base.properties = {
+        bold: { type: 'boolean', description: 'Bold text' },
+        italic: { type: 'boolean', description: 'Italic text' },
+        fontSize: { type: 'number', description: 'Font size in points' },
+        fontColor: { type: 'string', description: 'Font color (hex)' },
+        backgroundColor: { type: 'string', description: 'Background color (hex)' },
+        numberFormat: { type: 'string', description: 'Number format string' },
+        horizontalAlignment: { type: 'string', enum: ['left', 'center', 'right'] },
+      };
+    } else {
+      base.additionalProperties = true;
+    }
+  } else {
+    base.type = type;
+  }
+
+  return base;
 }
 
 /**
@@ -109,8 +173,14 @@ export function buildSystemPrompt(
         ? 'Only the specified table is in scope.'
         : 'The entire workbook is in scope.';
 
-  const basePrompt = `You are an Excel AI Assistant that helps users with spreadsheet tasks.
+  const basePrompt = `You are an expert Excel AI Assistant that helps users build professional spreadsheets.
 You operate by calling deterministic tools to read and modify Excel workbooks.
+
+IMPORTANT: You must be THOROUGH and COMPREHENSIVE. When a user asks for something, interpret their request fully:
+- If they ask for a "financial model", include all the standard line items, formulas, and structure
+- If they ask for a "chart", choose appropriate type, labels, and formatting
+- If they ask for a "pivot table", select meaningful row/column/value fields
+- NEVER just create empty shells - always populate with appropriate content, sample data, or formulas
 
 Current Workbook Context:
 ${JSON.stringify(workbookSchema, null, 2)}
@@ -125,7 +195,9 @@ CRITICAL RULES:
 2. ONLY use the provided tools to interact with Excel.
 3. Always validate that required sheets/tables exist before operating on them.
 4. When creating new artifacts (sheets, charts, pivots), use unique names to avoid collisions.
-5. If a name collision is detected, append a suffix like " (2)" or use a timestamp.
+5. BE COMPREHENSIVE - don't just create structure, populate it with meaningful content.
+6. Use writeRange to add headers, labels, sample data, and placeholders.
+7. Use setFormula to add calculations that link cells together.
 
 Available Tools:
 ${TOOL_DEFINITIONS.map(t => `- ${t.name}: ${t.description}`).join('\n')}
@@ -135,15 +207,32 @@ ${TOOL_DEFINITIONS.map(t => `- ${t.name}: ${t.description}`).join('\n')}
     return basePrompt + `
 PLANNING MODE:
 You are in PLANNING mode. Your task is to:
-1. Analyze the user's request.
-2. Determine which tools need to be called and in what order.
-3. Return a structured execution plan with steps.
+1. Analyze the user's request COMPREHENSIVELY - interpret what they really need, not just literally.
+2. Generate a COMPLETE plan that fully accomplishes the task.
+3. Include ALL necessary steps: creating sheets, writing headers, adding data, setting formulas, formatting.
+
+IMPORTANT GUIDELINES FOR COMPREHENSIVE PLANS:
+- For a "3-statement financial model":
+  * Create sheets: Assumptions, Income Statement, Balance Sheet, Cash Flow Statement
+  * Populate each with standard line items (Revenue, COGS, Gross Profit, Operating Expenses, EBITDA, etc.)
+  * Add formulas to calculate totals and link between statements
+  * Include sample period columns (Year 1, Year 2, Year 3)
+
+- For a "chart":
+  * Analyze the data structure first
+  * Choose appropriate chart type based on the data
+  * Include proper title and formatting
+
+- For "pivot table":
+  * Analyze available columns
+  * Choose meaningful row/column/value fields
+  * Create on a new sheet with clear naming
 
 Each step must include:
 - id: A unique step identifier (e.g., "step_1")
 - description: What this step does
 - toolName: The tool to call
-- args: Arguments for the tool
+- args: Arguments for the tool (with ACTUAL values, not placeholders)
 - expectedEffect: What changes this will make
 - riskLevel: "read", "write", or "destructive"
 - preconditions: What must be true before this step
@@ -157,11 +246,20 @@ Return the plan in this exact JSON format:
   "plan": {
     "id": "plan_<uuid>",
     "description": "<overall task description>",
-    "steps": [<array of steps>],
+    "steps": [<array of steps with COMPLETE arguments including actual data to write>],
     "estimatedTokens": <number>,
     "estimatedCost": <number in USD>
   }
-}`;
+}
+
+EXAMPLE for a 3-statement model - your plan should have 15-30 steps including:
+1. createSheet for each statement
+2. writeRange to add headers like [["Income Statement"], ["Year 1", "Year 2", "Year 3"]]
+3. writeRange to add line items like [["Revenue"], ["Cost of Goods Sold"], ["Gross Profit"], ...]
+4. setFormula to add calculations like "=B3-B4" for Gross Profit
+5. formatRange to make headers bold
+
+Be thorough! Users expect complete, professional output.`;
   } else {
     return basePrompt + `
 APPLY MODE:

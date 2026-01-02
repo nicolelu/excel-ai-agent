@@ -19,15 +19,6 @@
       "enabled": true
     },
     {
-      "id": "gpt-3.5-turbo",
-      "label": "GPT-3.5 Turbo",
-      "provider": "openai",
-      "family": "gpt-3.5",
-      "supportsToolCalling": true,
-      "defaultTemperature": 0.7,
-      "enabled": false
-    },
-    {
       "id": "claude-3-5-sonnet-20241022",
       "label": "Claude 3.5 Sonnet",
       "provider": "anthropic",
@@ -37,32 +28,68 @@
       "enabled": true
     },
     {
-      "id": "claude-3-opus-20240229",
-      "label": "Claude 3 Opus",
-      "provider": "anthropic",
-      "family": "claude-3",
-      "supportsToolCalling": true,
-      "defaultTemperature": 0.7,
-      "enabled": false
-    },
-    {
-      "id": "gemini-1.5-pro",
-      "label": "Gemini 1.5 Pro",
+      "id": "gemini-3-pro-preview",
+      "label": "Gemini 3 Pro",
       "provider": "google",
-      "family": "gemini-1.5",
+      "family": "gemini-3",
       "supportsToolCalling": true,
       "defaultTemperature": 0.7,
       "enabled": true
     },
     {
-      "id": "gemini-1.5-flash",
-      "label": "Gemini 1.5 Flash",
+      "id": "gemini-3-flash-preview",
+      "label": "Gemini 3 Flash",
       "provider": "google",
-      "family": "gemini-1.5",
+      "family": "gemini-3",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "gemini-2.5-pro",
+      "label": "Gemini 2.5 Pro",
+      "provider": "google",
+      "family": "gemini-2.5",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "gemini-2.5-flash",
+      "label": "Gemini 2.5 Flash",
+      "provider": "google",
+      "family": "gemini-2.5",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "gemini-2.5-flash-lite",
+      "label": "Gemini 2.5 Flash Lite",
+      "provider": "google",
+      "family": "gemini-2.5",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "gemini-2.0-flash",
+      "label": "Gemini 2.0 Flash",
+      "provider": "google",
+      "family": "gemini-2.0",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "gemini-2.0-flash-lite",
+      "label": "Gemini 2.0 Flash Lite",
+      "provider": "google",
+      "family": "gemini-2.0",
       "supportsToolCalling": true,
       "defaultTemperature": 0.7,
       "enabled": true
     }
   ],
-  "defaultModelId": "gpt-4o"
+  "defaultModelId": "gemini-2.5-flash"
 }

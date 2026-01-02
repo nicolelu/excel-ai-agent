@@ -134,9 +134,9 @@ export function useChat(
         }
       }
 
-      // Execute the tool
+      // Execute the tool - call directly on excelTools to preserve 'this' context
       const toolFn = (excelTools as unknown as Record<string, (args: unknown) => Promise<ToolResult>>)[toolName];
-      const result = await toolFn(args);
+      const result = await toolFn.call(excelTools, args);
 
       // Record in ledger if successful
       if (result.success && result.artifactId) {

@@ -27,7 +27,7 @@ export class AnthropicAdapter implements LLMProvider {
     });
     this.modelId = config.modelId;
     this.defaultTemperature = config.temperature ?? 0.7;
-    this.defaultMaxTokens = config.maxTokens ?? 4096;
+    this.defaultMaxTokens = config.maxTokens ?? 16384;
   }
 
   async chat(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {

@@ -339,46 +339,110 @@ class ChatService {
   }
 
   private extractPlanFromResponse(content: string): ExecutionPlan | null {
-    try {
-      // Try to find JSON in the response
-      const jsonMatch = content.match(/\{[\s\S]*"plan"[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed.plan && Array.isArray(parsed.plan.steps)) {
-          // Validate and clean up the plan
-          const plan: ExecutionPlan = {
-            id: parsed.plan.id || `plan_${uuidv4()}`,
-            createdAt: Date.now(),
-            description: parsed.plan.description || 'Generated plan',
-            steps: parsed.plan.steps.map((step: Partial<PlanStep>, index: number) => ({
-              id: step.id || `step_${index + 1}`,
-              description: step.description || 'Unnamed step',
-              toolName: step.toolName as ToolName,
-              args: step.args || {},
-              expectedEffect: step.expectedEffect || '',
-              riskLevel: step.riskLevel || 'write',
-              preconditions: step.preconditions || [],
-              postconditions: step.postconditions || [],
-            })),
-            estimatedTokens: parsed.plan.estimatedTokens,
-            estimatedCost: parsed.plan.estimatedCost,
-          };
+    console.log('[ChatService] Attempting to extract plan from response, length:', content.length);
 
-          // Validate tool names
-          for (const step of plan.steps) {
-            const toolDef = TOOL_DEFINITIONS.find(t => t.name === step.toolName);
-            if (!toolDef) {
-              console.warn(`Unknown tool in plan: ${step.toolName}`);
+    try {
+      // Try multiple strategies to find the plan JSON
+      let parsed: { plan?: { id?: string; description?: string; steps?: Partial<PlanStep>[] } } | null = null;
+
+      // Strategy 1: Try to parse the entire content as JSON
+      try {
+        parsed = JSON.parse(content.trim());
+        console.log('[ChatService] Strategy 1 (direct parse) succeeded');
+      } catch {
+        // Continue to next strategy
+      }
+
+      // Strategy 2: Look for JSON code block (with or without closing ```)
+      if (!parsed) {
+        // Match code block with optional closing
+        const codeBlockMatch = content.match(/```(?:json)?\s*\n?([\s\S]*?)(?:```|$)/);
+        if (codeBlockMatch && codeBlockMatch[1]) {
+          const jsonContent = codeBlockMatch[1].trim();
+          console.log('[ChatService] Strategy 2 found code block, attempting parse');
+          try {
+            parsed = JSON.parse(jsonContent);
+            console.log('[ChatService] Strategy 2 (code block) succeeded');
+          } catch (e) {
+            console.log('[ChatService] Strategy 2 parse failed:', (e as Error).message);
+            // Try to extract just the JSON object from the code block
+            const jsonMatch = jsonContent.match(/(\{[\s\S]*\})\s*$/);
+            if (jsonMatch) {
+              try {
+                parsed = JSON.parse(jsonMatch[1]);
+                console.log('[ChatService] Strategy 2b (code block + regex) succeeded');
+              } catch {
+                // Continue
+              }
             }
           }
-
-          return plan;
         }
       }
 
+      // Strategy 3: Find JSON object with "plan" key using balanced brace matching
+      if (!parsed) {
+        // Look for { "plan" or {"plan"
+        const planStartMatch = content.match(/\{\s*"plan"/);
+        if (planStartMatch && planStartMatch.index !== undefined) {
+          const planStart = planStartMatch.index;
+          console.log('[ChatService] Strategy 3 found plan start at index:', planStart);
+          // Find matching closing brace
+          let braceCount = 0;
+          let endIndex = planStart;
+          for (let i = planStart; i < content.length; i++) {
+            if (content[i] === '{') braceCount++;
+            if (content[i] === '}') braceCount--;
+            if (braceCount === 0) {
+              endIndex = i + 1;
+              break;
+            }
+          }
+          const jsonStr = content.slice(planStart, endIndex);
+          try {
+            parsed = JSON.parse(jsonStr);
+            console.log('[ChatService] Strategy 3 (balanced braces) succeeded');
+          } catch (e) {
+            console.log('[ChatService] Strategy 3 parse failed:', (e as Error).message);
+          }
+        }
+      }
+
+      // Validate we have a plan with steps
+      if (parsed?.plan && Array.isArray(parsed.plan.steps) && parsed.plan.steps.length > 0) {
+        const plan: ExecutionPlan = {
+          id: parsed.plan.id || `plan_${uuidv4()}`,
+          createdAt: Date.now(),
+          description: parsed.plan.description || 'Generated plan',
+          steps: parsed.plan.steps.map((step: Partial<PlanStep>, index: number) => ({
+            id: step.id || `step_${index + 1}`,
+            description: step.description || 'Unnamed step',
+            toolName: step.toolName as ToolName,
+            args: step.args || {},
+            expectedEffect: step.expectedEffect || '',
+            riskLevel: step.riskLevel || 'write',
+            preconditions: step.preconditions || [],
+            postconditions: step.postconditions || [],
+          })),
+          estimatedTokens: parsed.plan.estimatedTokens,
+          estimatedCost: parsed.plan.estimatedCost,
+        };
+
+        // Validate tool names
+        for (const step of plan.steps) {
+          const toolDef = TOOL_DEFINITIONS.find(t => t.name === step.toolName);
+          if (!toolDef) {
+            console.warn(`[ChatService] Unknown tool in plan: ${step.toolName}`);
+          }
+        }
+
+        console.log(`[ChatService] Successfully extracted plan with ${plan.steps.length} steps`);
+        return plan;
+      }
+
+      console.log('[ChatService] No valid plan structure found. Parsed object:', parsed ? 'exists but invalid' : 'null');
       return null;
     } catch (e) {
-      console.error('Failed to parse plan from response:', e);
+      console.error('[ChatService] Failed to parse plan from response:', e);
       return null;
     }
   }
