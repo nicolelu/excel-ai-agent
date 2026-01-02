@@ -1,0 +1,30 @@
+{
+  "name": "excel-ai-agent",
+  "version": "1.0.0",
+  "description": "Excel AI Assistant - A Cursor-like AI-powered Office Add-in for Excel",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "addin"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run build:shared",
+    "build:shared": "npm run build -w @excel-ai-agent/shared",
+    "dev:server": "npm run dev -w @excel-ai-agent/server",
+    "dev:addin": "npm run dev -w @excel-ai-agent/addin",
+    "build:server": "npm run build -w @excel-ai-agent/server",
+    "build:addin": "npm run build -w @excel-ai-agent/addin",
+    "build": "npm run build:shared && npm run build:server && npm run build:addin",
+    "start:server": "npm run start -w @excel-ai-agent/server",
+    "test": "npm run test -w @excel-ai-agent/server",
+    "lint": "npm run lint -w @excel-ai-agent/server && npm run lint -w @excel-ai-agent/addin",
+    "sideload": "npm run start -w @excel-ai-agent/addin",
+    "validate": "npm run validate -w @excel-ai-agent/addin",
+    "certs": "npx office-addin-dev-certs install",
+    "clean": "rm -rf node_modules shared/dist server/dist addin/dist"
+  },
+  "devDependencies": {
+    "office-addin-dev-certs": "^1.11.7"
+  }
+}

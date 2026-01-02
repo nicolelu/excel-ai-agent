@@ -1,0 +1,68 @@
+{
+  "models": [
+    {
+      "id": "gpt-4o",
+      "label": "GPT-4o",
+      "provider": "openai",
+      "family": "gpt-4",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "gpt-4o-mini",
+      "label": "GPT-4o Mini",
+      "provider": "openai",
+      "family": "gpt-4",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "gpt-3.5-turbo",
+      "label": "GPT-3.5 Turbo",
+      "provider": "openai",
+      "family": "gpt-3.5",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": false
+    },
+    {
+      "id": "claude-3-5-sonnet-20241022",
+      "label": "Claude 3.5 Sonnet",
+      "provider": "anthropic",
+      "family": "claude-3.5",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "claude-3-opus-20240229",
+      "label": "Claude 3 Opus",
+      "provider": "anthropic",
+      "family": "claude-3",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": false
+    },
+    {
+      "id": "gemini-1.5-pro",
+      "label": "Gemini 1.5 Pro",
+      "provider": "google",
+      "family": "gemini-1.5",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "gemini-1.5-flash",
+      "label": "Gemini 1.5 Flash",
+      "provider": "google",
+      "family": "gemini-1.5",
+      "supportsToolCalling": true,
+      "defaultTemperature": 0.7,
+      "enabled": true
+    }
+  ],
+  "defaultModelId": "gpt-4o"
+}
